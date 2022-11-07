@@ -51,7 +51,7 @@ def init():
         settings.watch.append(args.add_id)
     if not args.skip_hash and cfg.read_config("calculate_hashes"):
         settings.calculate_hashes = True
-    
+
 
 def check_endpoints():
     logger.info("Checking endpoints...")
@@ -73,7 +73,7 @@ def check_endpoints():
         exit(1)
 
 def get_missing():
-    movies = settings.radarr.get_movie()    
+    movies = settings.radarr.get_movie()
     for movie in movies:
         if movie['monitored']:
             if not movie['hasFile'] and movie['tmdbId'] not in settings.watch:
@@ -163,6 +163,11 @@ def move_torrent(t, movie, rename):
         if movie['tmdbId'] in settings.changed:
             settings.changed.remove(movie['tmdbId'])
         logger.info(f"Queueing {t['name']} for deletion")
+
+        settings.client.torrents_set_category(category=cfg.read_config("torrent_processed_category"),
+                                              torrent_hash=t['hash'])
+        logger.info(f"{t['name']} changing category to {cfg.read_config('torrent_processed_category')}")
+
         if rename:
                 # Renamed files only have a folder, adding a fake file to prevent dirname going up too much.
                 og_path = os.path.join(og_path, "fakefile.mkv")
@@ -177,7 +182,7 @@ def move_torrent(t, movie, rename):
 
 def match_and_move_torrents():
     found = False
-    torrents = settings.client.torrents_info(category=cfg.read_config("torrent_category"))
+    torrents = settings.client.torrents_info(category=cfg.read_config("torrent_radarr_category"))
     if len(settings.changed) == 0:
         logger.debug("Change queue empty.")
         return
@@ -206,7 +211,7 @@ def check_and_delete():
     deleted = []
     for torrent in settings.to_delete:
         status = settings.client.torrents_info(torrent_hashes=torrent["torrent"]['hash'])[0]
-        if status['state'] not in ["error", "checkingUP", "moving", "unknown"]: 
+        if status['state'] not in ["error", "checkingUP", "moving", "unknown"]:
             logger.info(f"{status['name']}'s state is '{status['state']}', deleting: {os.path.dirname(torrent['original_path'])}")
             if not args.no_delete:
                 try:
