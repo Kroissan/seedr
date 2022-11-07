@@ -46,6 +46,7 @@ logger.addHandler(console)
 
 sched = BackgroundScheduler(timezone="America/New_York")
 
+
 def init():
     if args.add_id is not None:
         settings.watch.append(args.add_id)
@@ -72,6 +73,7 @@ def check_endpoints():
         logger.error(f"Error connecting to the torrent client: {e}")
         exit(1)
 
+
 def get_missing():
     movies = settings.radarr.get_movie()
     for movie in movies:
@@ -79,6 +81,7 @@ def get_missing():
             if not movie['hasFile'] and movie['tmdbId'] not in settings.watch:
                 logger.info(f"Adding to monitored movies: '{movie['title']}' with id {movie['tmdbId']}")
                 settings.watch.append(movie['tmdbId'])
+
 
 def update_state():
     found = False
@@ -103,12 +106,14 @@ def update_state():
     if not found:
         logger.debug("No state changes found.")
 
+
 def blake(file):
     with open(file, "rb") as f:
         file_hash = hashlib.blake2b()
         while chunk := f.read():
             file_hash.update(chunk)
     return file_hash.hexdigest()
+
 
 def move_torrent(t, movie, rename):
     # Removing before hash check to prevent threads from analyzing the same file
@@ -169,8 +174,8 @@ def move_torrent(t, movie, rename):
         logger.info(f"{t['name']} changing category to {cfg.read_config('torrent_processed_category')}")
 
         if rename:
-                # Renamed files only have a folder, adding a fake file to prevent dirname going up too much.
-                og_path = os.path.join(og_path, "fakefile.mkv")
+            # Renamed files only have a folder, adding a fake file to prevent dirname going up too much.
+            og_path = os.path.join(og_path, "fakefile.mkv")
         if {"torrent": t, "original_path": og_path} not in settings.to_delete:
             logger.debug({"torrent": t, "original_path": og_path})
             settings.to_delete.append({"torrent": t, "original_path": og_path})
@@ -179,6 +184,7 @@ def move_torrent(t, movie, rename):
         # re-adding on failure
         if movie['tmdbId'] not in settings.changed:
             settings.changed.append(movie['tmdbId'])
+
 
 def match_and_move_torrents():
     found = False
@@ -194,18 +200,21 @@ def match_and_move_torrents():
             movie = movie[0]
             logger.debug(f"Looking for movie: {movie['title']} ({movie['movieFile']['relativePath']})")
             for t in torrents:
-                for f in settings.client.torrents_files(torrent_hash=t['hash']):
+                files = settings.client.torrents_files(torrent_hash=t['hash'])
+                for f in files:
                     if movie['movieFile']['relativePath'] == ntpath.basename(f['name']):
                         found = True
                         rename_needed = False
                         logger.info(f"Found a match for {movie['title']} with torrent: {t['name']}.")
-                        t['content_path'] = os.path.join(t['content_path'],ntpath.basename(f['name']))
+                        if len(files) > 1:
+                            t['content_path'] = os.path.join(t['content_path'], ntpath.basename(f['name']))
                         if ntpath.basename(f['name']) != f['name']:
                             rename_needed = True
                         move_torrent(t, movie, rename_needed)
                         break
     if not found and len(torrents) > 0:
         logger.warning(f"{len(settings.changed)} changes in Radarr but no match found in your torrent client.")
+
 
 def check_and_delete():
     deleted = []
@@ -237,6 +246,7 @@ def check_and_delete():
     for i in deleted:
         settings.to_delete.remove(i)
 
+
 def save():
     if args.no_save:
         return
@@ -255,6 +265,7 @@ def save():
         logger.debug("Saved.")
     except Exception as e:
         logger.error(f"Error saving data. {e}")
+
 
 def load():
     savepath = os.path.dirname(settings.config_file)
@@ -280,14 +291,17 @@ def load():
     except Exception as e:
         logger.error(f"Error loading data. {e}")
 
+
 def clean_shutdown(force=True):
     save()
     sched.shutdown(wait=not force)
     logger.info("Goodbye.")
     exit()
 
+
 def signal_handler(sig, frame):
     clean_shutdown()
+
 
 signal.signal(signal.SIGINT, signal_handler)
 init()
