@@ -169,16 +169,17 @@ def move_torrent(t, movie, rename):
             settings.changed.remove(movie['tmdbId'])
         logger.info(f"Queueing {t['name']} for deletion")
 
-        settings.client.torrents_set_category(category=cfg.read_config("torrent_processed_category"),
-                                              torrent_hash=t['hash'])
-        logger.info(f"{t['name']} changing category to {cfg.read_config('torrent_processed_category')}")
-
         if rename:
             # Renamed files only have a folder, adding a fake file to prevent dirname going up too much.
             og_path = os.path.join(og_path, "fakefile.mkv")
         if {"torrent": t, "original_path": og_path} not in settings.to_delete:
             logger.debug({"torrent": t, "original_path": og_path})
             settings.to_delete.append({"torrent": t, "original_path": og_path})
+
+        logger.info(f"{t['name']} changing category to {cfg.read_config('torrent_processed_category')}")
+        t.set_category(cfg.read_config("torrent_processed_category"))
+
+        logger.info(f"{t['name']} successfully moved")
     except Exception as e:
         logger.error(f"Could not move torrent: {t['name']}. {e}")
         # re-adding on failure
