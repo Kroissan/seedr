@@ -28,7 +28,7 @@ args = parser.parse_args()
 if args.config is not None:
     settings.config_file = args.config
 else:
-    dir_path = "./"  # f"{str(Path.home())}/.config/seedr/"
+    dir_path = f"{str(Path.home())}/.config/seedr/"
     dir_path = os.path.join(dir_path, 'config.json')
     settings.config_file = dir_path
 
