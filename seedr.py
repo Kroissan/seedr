@@ -28,7 +28,7 @@ args = parser.parse_args()
 if args.config is not None:
     settings.config_file = args.config
 else:
-    dir_path = f"{str(Path.home())}/.config/seedr/"
+    dir_path = "./"  # f"{str(Path.home())}/.config/seedr/"
     dir_path = os.path.join(dir_path, 'config.json')
     settings.config_file = dir_path
 
@@ -226,16 +226,19 @@ def check_and_delete():
             if not args.no_delete:
                 try:
                     # Failsafe
-                    if os.path.dirname(torrent['original_path']) != cfg.read_config("torrent_library_directory") and os.path.dirname(torrent['original_path']) != cfg.read_config("radarr_library_directory") and os.path.dirname(torrent['original_path']) != cfg.read_config("torrent_download_directory"):
-                            if os.path.isdir(os.path.dirname(torrent['original_path'])):
-                                shutil.rmtree(os.path.dirname(torrent['original_path']))
+                    if torrent['original_path'] not in [cfg.read_config("torrent_library_directory"),
+                                                        cfg.read_config("torrent_download_directory"),
+                                                        cfg.read_config("radarr_library_directory")]:
+                            if os.path.isdir(torrent['original_path']):
+                                logger.info(f"{torrent['original_path']} dir deleted.")
+                                shutil.rmtree(torrent['original_path'])
                             else:
-                                os.remove(os.path.dirname(torrent['original_path']))
+                                logger.info(f"{torrent['original_path']} deleted.")
+                                os.remove(torrent['original_path'])
                     else:
                         logger.error(f"Hitting failsafe to prevent library deletion -> {os.path.dirname(torrent['original_path'])}")
                     if torrent not in deleted:
                         deleted.append(torrent)
-                    logger.info(f"{os.path.dirname(torrent['original_path'])} deleted.")
                 except Exception as e:
                     logger.error(f"Error deleting {os.path.dirname(torrent['original_path'])}, {e}")
             else:
